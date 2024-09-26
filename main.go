@@ -156,7 +156,10 @@ func getBtsByIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(bts)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "success",
+		"data":    bts,
+	})
 }
 
 func createBtsHandler(w http.ResponseWriter, r *http.Request) {
@@ -225,7 +228,8 @@ func updateBtsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = stmt.Exec(update.KEL_DES, update.KAB_KOTA, update.PROV, update.LUAS_DESA, update.TOTAL_NE, update.RASIO_NE, update.TOTAL_NE_4G, update.RASIO_NE_4G, update.KEC, update.ID_BTS)
+	_, err = stmt.Exec(update.KEL_DES, update.KAB_KOTA, update.PROV, update.LUAS_DESA, update.TOTAL_NE, update.RASIO_NE,
+		update.TOTAL_NE_4G, update.RASIO_NE_4G, update.KEC, update.ID_BTS)
 	if err != nil {
 		http.Error(w, "Failed to execute update: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -265,15 +269,26 @@ func deleteBtsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = stmt.Exec(remove.ID_BTS)
+	result, err := stmt.Exec(remove.ID_BTS)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to execute delete: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(w, "Failed to fetch rows affected: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		http.Error(w, "No BTS found with that ID", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":      "success",
-		"removed_data": remove,
+		"message":    "success",
+		"deleted_id": remove.ID_BTS,
 	})
 }
